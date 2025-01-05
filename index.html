@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Project Tasks Pivot</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        .capitolo-row {
+            background-color: #f8f9fa;
+            font-weight: bold;
+        }
+        .task-row {
+            background-color: #ffffff;
+        }
+        .total-row {
+            background-color: #e9ecef;
+            font-weight: bold;
+        }
+    </style>
+</head>
+<body>
+    <div class="container mt-5">
+        <h1 class="mb-4">Project Tasks Pivot</h1>
+        <div id="error" class="text-danger mb-3"></div>
+        <table class="table table-striped">
+            <thead class="table-dark">
+                <tr>
+                    <th scope="col">Capitolo</th>
+                    <th scope="col">Descrizione</th>
+                    <th scope="col">Totale (€)</th>
+                </tr>
+            </thead>
+            <tbody></tbody>
+        </table>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const urlParams = new URLSearchParams(window.location.search);
+            const projectId = urlParams.get('id');
+
+            if (!projectId) {
+                document.getElementById('error').innerText = 'Errore: Specificare un parametro ?id=<project_id> nella query string.';
+                return;
+            }
+
+            fetch(`https://turso-athena-select.giobi.workers.dev/tasks?project_id=${projectId}`)
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error(`Errore nella richiesta: ${response.statusText}`);
+                    }
+                    return response.json();
+                })
+                .then(data => {
+                    const tableBody = document.querySelector('table tbody');
+                    const groupedData = {};
+
+                    // Estrarre le colonne e le righe
+                    const columns = data.cols.map(col => col.name);
+                    const rows = data.rows.map(row => {
+                        return row.reduce((acc, cell, index) => {
+                            acc[columns[index]] = cell.value;
+                            return acc;
+                        }, {});
+                    });
+
+                    // Organizzare i dati per capitolo
+                    rows.forEach(task => {
+                        const capitolo = task.task_id || task.title;
+
+                        if (!groupedData[capitolo]) {
+                            groupedData[capitolo] = {
+                                tasks: [],
+                                subtotal: 0
+                            };
+                        }
+
+                        groupedData[capitolo].tasks.push(task);
+                        groupedData[capitolo].subtotal += parseFloat(task.total || 0);
+                    });
+
+                    let grandTotal = 0;
+
+                    // Popolare la tabella
+                    for (const [capitolo, { tasks, subtotal }] of Object.entries(groupedData)) {
+                        // Riga del capitolo
+                        const capitoloRow = document.createElement('tr');
+                        capitoloRow.classList.add('capitolo-row');
+                        capitoloRow.innerHTML = `
+                            <td>${capitolo}</td>
+                            <td></td>
+                            <td>${subtotal.toFixed(2)}</td>
+                        `;
+                        tableBody.appendChild(capitoloRow);
+
+                        // Riga dei task
+                        tasks.forEach(task => {
+                            const taskRow = document.createElement('tr');
+                            taskRow.classList.add('task-row');
+                            taskRow.innerHTML = `
+                                <td></td>
+                                <td>${task.title}</td>
+                                <td>${parseFloat(task.total || 0).toFixed(2)}</td>
+                            `;
+                            tableBody.appendChild(taskRow);
+                        });
+
+                        grandTotal += subtotal;
+                    }
+
+                    // Riga del totale generale
+                    const totalRow = document.createElement('tr');
+                    totalRow.classList.add('total-row');
+                    totalRow.innerHTML = `
+                        <td colspan="2">Totale Generale</td>
+                        <td>${grandTotal.toFixed(2)}</td>
+                    `;
+                    tableBody.appendChild(totalRow);
+                })
+                .catch(error => {
+                    document.getElementById('error').innerText = `Errore: ${error.message}`;
+                });
+        });
+    </script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>
