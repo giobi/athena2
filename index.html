@@ -6,25 +6,47 @@
     <title>Project Tasks Pivot</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <style>
+        body {
+            background-color: #121212;
+            color: #ffffff;
+        }
+        .container {
+            margin-top: 20px;
+        }
+        .table {
+            background-color: #1e1e1e;
+        }
+        .table thead {
+            background-color: #333333;
+        }
         .capitolo-row {
-            background-color: #f8f9fa;
+            background-color: #444444;
             font-weight: bold;
+        }
+        .subtotal-row {
+            background-color: #555555;
         }
         .task-row {
-            background-color: #ffffff;
+            background-color: #1e1e1e;
         }
         .total-row {
-            background-color: #e9ecef;
+            background-color: #666666;
             font-weight: bold;
+        }
+        td {
+            text-align: right;
+        }
+        td:first-child {
+            text-align: left;
         }
     </style>
 </head>
 <body>
-    <div class="container mt-5">
-        <h1 class="mb-4">Project Tasks Pivot</h1>
+    <div class="container">
+        <h1 id="page-title" class="mb-4">Project Tasks Pivot</h1>
         <div id="error" class="text-danger mb-3"></div>
-        <table class="table table-striped">
-            <thead class="table-dark">
+        <table class="table table-striped table-dark">
+            <thead>
                 <tr>
                     <th scope="col">Capitolo</th>
                     <th scope="col">Descrizione</th>
@@ -67,7 +89,7 @@
 
                     // Organizzare i dati per capitolo
                     rows.forEach(task => {
-                        const capitolo = task.task_id || task.title;
+                        const capitolo = task.task_id ? task.task_id : task.title;
 
                         if (!groupedData[capitolo]) {
                             groupedData[capitolo] = {
@@ -81,6 +103,7 @@
                     });
 
                     let grandTotal = 0;
+                    document.getElementById('page-title').innerText = rows[0]?.title || "Project Tasks Pivot";
 
                     // Popolare la tabella
                     for (const [capitolo, { tasks, subtotal }] of Object.entries(groupedData)) {
@@ -88,9 +111,9 @@
                         const capitoloRow = document.createElement('tr');
                         capitoloRow.classList.add('capitolo-row');
                         capitoloRow.innerHTML = `
-                            <td>${capitolo}</td>
+                            <td>${tasks[0]?.title || capitolo}</td>
                             <td></td>
-                            <td>${subtotal.toFixed(2)}</td>
+                            <td>${subtotal.toLocaleString('it-IT', { minimumFractionDigits: 0 })}</td>
                         `;
                         tableBody.appendChild(capitoloRow);
 
@@ -101,10 +124,19 @@
                             taskRow.innerHTML = `
                                 <td></td>
                                 <td>${task.title}</td>
-                                <td>${parseFloat(task.total || 0).toFixed(2)}</td>
+                                <td>${parseFloat(task.total || 0).toLocaleString('it-IT', { minimumFractionDigits: 0 })}</td>
                             `;
                             tableBody.appendChild(taskRow);
                         });
+
+                        // Riga del subtotale
+                        const subtotalRow = document.createElement('tr');
+                        subtotalRow.classList.add('subtotal-row');
+                        subtotalRow.innerHTML = `
+                            <td colspan="2">Totale ${tasks[0]?.title || capitolo}</td>
+                            <td>${subtotal.toLocaleString('it-IT', { minimumFractionDigits: 0 })}</td>
+                        `;
+                        tableBody.appendChild(subtotalRow);
 
                         grandTotal += subtotal;
                     }
@@ -114,7 +146,7 @@
                     totalRow.classList.add('total-row');
                     totalRow.innerHTML = `
                         <td colspan="2">Totale Generale</td>
-                        <td>${grandTotal.toFixed(2)}</td>
+                        <td>${grandTotal.toLocaleString('it-IT', { minimumFractionDigits: 0 })}</td>
                     `;
                     tableBody.appendChild(totalRow);
                 })
